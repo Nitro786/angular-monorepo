@@ -29,12 +29,18 @@ jobs:
       - name: Build Angular App
         run: npx nx build angular-monorepo --configuration production --base-href /angular-monorepo/
 
+      # Archive the build output to remove symlinks
+      - name: Archive build output
+        run: |
+          cd ./dist/apps/angular-monorepo
+          zip -r ../../artifact.zip .
+
       # Upload artifact for deployment
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: github-pages
-          path: ./dist/apps/angular-monorepo
+          path: ./dist/artifact.zip
 
   deploy:
     needs: build
