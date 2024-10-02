@@ -6,21 +6,15 @@ on:
       - main
   pull_request:
 
-permissions:
-  actions: read
-  contents: read
-
 jobs:
-  main:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.upload_pages.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      - run: npx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e-ci"
 
       # Cache node_modules
       - uses: actions/setup-node@v4
@@ -29,19 +23,32 @@ jobs:
           cache: 'npm'
 
       - run: npm ci --legacy-peer-deps
-      - uses: nrwl/nx-set-shas@v4
 
       # Run lint, test, build, and e2e-ci tasks for affected projects
       - run: npx nx affected -t lint test build e2e-ci
 
       # Build your Angular application
       - name: Build Angular App
-        run: npx nx run  angular-monorepo:build --prod
+        run: npx nx build angular-monorepo --configuration production --base-href /angular-monorepo/
 
-      # Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+      # Upload artifact for deployment
+      - name: Upload artifact
+        id: upload_pages
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist/apps/angular-monorepo/browser
+          path: ./dist/apps/angular-monorepo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write # To deploy to GitHub Pages
+      id-token: write # To authenticate to GitHub's OIDC provider
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
