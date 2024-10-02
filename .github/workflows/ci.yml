@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      artifact_name: ${{ steps.upload_pages.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,9 +31,9 @@ jobs:
 
       # Upload artifact for deployment
       - name: Upload artifact
-        id: upload_pages
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
+          name: github-pages
           path: ./dist/apps/angular-monorepo
 
   deploy:
@@ -45,10 +43,6 @@ jobs:
       contents: read
       pages: write # To deploy to GitHub Pages
       id-token: write # To authenticate to GitHub's OIDC provider
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
-        id: deployment
         uses: actions/deploy-pages@v4
